@@ -12,6 +12,7 @@ from whatsapp import (
     send_message as whatsapp_send_message,
     send_file as whatsapp_send_file,
     send_audio_message as whatsapp_audio_voice_message,
+    send_sticker as whatsapp_send_sticker,
     download_media as whatsapp_download_media
 )
 
@@ -35,6 +36,7 @@ def list_messages(
     sender_phone_number: Optional[str] = None,
     chat_jid: Optional[str] = None,
     query: Optional[str] = None,
+    media_type: Optional[str] = None,
     limit: int = 20,
     page: int = 0,
     include_context: bool = True,
@@ -49,6 +51,7 @@ def list_messages(
         sender_phone_number: Optional phone number to filter messages by sender
         chat_jid: Optional chat JID to filter messages by chat
         query: Optional search term to filter messages by content
+        media_type: Optional media type to filter messages (e.g., "image", "sticker", "audio", "document")
         limit: Maximum number of messages to return (default 20)
         page: Page number for pagination (default 0)
         include_context: Whether to include messages before and after matches (default True)
@@ -61,6 +64,7 @@ def list_messages(
         sender_phone_number=sender_phone_number,
         chat_jid=chat_jid,
         query=query,
+        media_type=media_type,
         limit=limit,
         page=page,
         include_context=include_context,
@@ -216,6 +220,24 @@ def send_audio_message(recipient: str, media_path: str) -> Dict[str, Any]:
         A dictionary containing success status and a status message
     """
     success, status_message = whatsapp_audio_voice_message(recipient, media_path)
+    return {
+        "success": success,
+        "message": status_message
+    }
+
+@mcp.tool()
+def send_sticker(recipient: str, media_path: str) -> Dict[str, Any]:
+    """Send a sticker via WhatsApp to the specified recipient. The file must be a .webp image. For group messages use the JID.
+
+    Args:
+        recipient: The recipient - either a phone number with country code but no + or other symbols,
+                 or a JID (e.g., "123456789@s.whatsapp.net" or a group JID like "123456789@g.us")
+        media_path: The absolute path to the .webp sticker file to send
+
+    Returns:
+        A dictionary containing success status and a status message
+    """
+    success, status_message = whatsapp_send_sticker(recipient, media_path)
     return {
         "success": success,
         "message": status_message

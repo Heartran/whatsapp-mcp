@@ -1,7 +1,7 @@
 import sqlite3
 from datetime import datetime
 from dataclasses import dataclass
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Dict, Any
 import os.path
 import requests
 import json
@@ -91,8 +91,8 @@ def get_sender_name(sender_jid: str) -> str:
         if 'conn' in locals():
             conn.close()
 
-def format_message(message: Message, show_chat_info: bool = True) -> None:
-    """Print a single message with consistent formatting."""
+def format_message(message: Message, show_chat_info: bool = True) -> str:
+    """Format a single message with consistent formatting."""
     output = ""
     
     if show_chat_info and message.chat_name:
@@ -109,17 +109,33 @@ def format_message(message: Message, show_chat_info: bool = True) -> None:
         output += f"From: {sender_name}: {content_prefix}{message.content}\n"
     except Exception as e:
         print(f"Error formatting message: {e}")
+        return f"[{message.timestamp:%Y-%m-%d %H:%M:%S}] Error formatting message: {e}"
+    
     return output
 
-def format_messages_list(messages: List[Message], show_chat_info: bool = True) -> None:
-    output = ""
+def format_messages_list(messages: List[Message], show_chat_info: bool = True) -> str:
+    """Format a list of messages for display."""
     if not messages:
-        output += "No messages to display."
-        return output
+        return "No messages to display."
     
+    output = ""
     for message in messages:
         output += format_message(message, show_chat_info)
+    
     return output
+
+def message_to_dict(message: Message) -> Dict[str, Any]:
+    """Convert a Message object to a dictionary for MCP response."""
+    return {
+        "timestamp": message.timestamp.isoformat(),
+        "sender": message.sender,
+        "content": message.content,
+        "is_from_me": message.is_from_me,
+        "chat_jid": message.chat_jid,
+        "id": message.id,
+        "chat_name": message.chat_name,
+        "media_type": message.media_type
+    }
 
 def list_messages(
     after: Optional[str] = None,
@@ -127,6 +143,7 @@ def list_messages(
     sender_phone_number: Optional[str] = None,
     chat_jid: Optional[str] = None,
     query: Optional[str] = None,
+    media_type: Optional[str] = None,
     limit: int = 20,
     page: int = 0,
     include_context: bool = True,
@@ -175,6 +192,10 @@ def list_messages(
             where_clauses.append("LOWER(messages.content) LIKE LOWER(?)")
             params.append(f"%{query}%")
             
+        if media_type:
+            where_clauses.append("messages.media_type = ?")
+            params.append(media_type)
+            
         if where_clauses:
             query_parts.append("WHERE " + " AND ".join(where_clauses))
             
@@ -210,10 +231,11 @@ def list_messages(
                 messages_with_context.append(context.message)
                 messages_with_context.extend(context.after)
             
-            return format_messages_list(messages_with_context, show_chat_info=True)
+            # Convert to dict format for MCP
+            return [message_to_dict(msg) for msg in messages_with_context]
             
-        # Format and display messages without context
-        return format_messages_list(result, show_chat_info=True)    
+        # Convert to dict format for MCP
+        return [message_to_dict(msg) for msg in result]    
         
     except sqlite3.Error as e:
         print(f"Database error: {e}")
@@ -677,6 +699,42 @@ def send_file(recipient: str, media_path: str) -> Tuple[bool, str]:
         else:
             return False, f"Error: HTTP {response.status_code} - {response.text}"
             
+    except requests.RequestException as e:
+        return False, f"Request error: {str(e)}"
+    except json.JSONDecodeError:
+        return False, f"Error parsing response: {response.text}"
+    except Exception as e:
+        return False, f"Unexpected error: {str(e)}"
+
+def send_sticker(recipient: str, media_path: str) -> Tuple[bool, str]:
+    try:
+        if not recipient:
+            return False, "Recipient must be provided"
+
+        if not media_path:
+            return False, "Media path must be provided"
+
+        if not os.path.isfile(media_path):
+            return False, f"Media file not found: {media_path}"
+
+        if not media_path.lower().endswith(".webp"):
+            return False, "Sticker must be a .webp file"
+
+        url = f"{WHATSAPP_API_BASE_URL}/send"
+        payload = {
+            "recipient": recipient,
+            "media_path": media_path,
+            "as_sticker": True
+        }
+
+        response = requests.post(url, json=payload)
+
+        if response.status_code == 200:
+            result = response.json()
+            return result.get("success", False), result.get("message", "Unknown response")
+        else:
+            return False, f"Error: HTTP {response.status_code} - {response.text}"
+
     except requests.RequestException as e:
         return False, f"Request error: {str(e)}"
     except json.JSONDecodeError:
