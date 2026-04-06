@@ -35,6 +35,7 @@ def list_messages(
     sender_phone_number: Optional[str] = None,
     chat_jid: Optional[str] = None,
     query: Optional[str] = None,
+    media_type: Optional[str] = None,
     limit: int = 20,
     page: int = 0,
     include_context: bool = True,
@@ -49,6 +50,7 @@ def list_messages(
         sender_phone_number: Optional phone number to filter messages by sender
         chat_jid: Optional chat JID to filter messages by chat
         query: Optional search term to filter messages by content
+        media_type: Optional media type to filter messages (e.g., "image", "sticker", "audio", "document")
         limit: Maximum number of messages to return (default 20)
         page: Page number for pagination (default 0)
         include_context: Whether to include messages before and after matches (default True)
@@ -61,6 +63,7 @@ def list_messages(
         sender_phone_number=sender_phone_number,
         chat_jid=chat_jid,
         query=query,
+        media_type=media_type,
         limit=limit,
         page=page,
         include_context=include_context,
