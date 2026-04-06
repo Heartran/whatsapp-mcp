@@ -126,10 +126,13 @@ def format_messages_list(messages: List[Message], show_chat_info: bool = True) -
 
 def message_to_dict(message: Message) -> Dict[str, Any]:
     """Convert a Message object to a dictionary for MCP response."""
+    content = message.content
+    if not content and message.media_type:
+        content = f"[{message.media_type}]"
     return {
         "timestamp": message.timestamp.isoformat(),
         "sender": message.sender,
-        "content": message.content,
+        "content": content,
         "is_from_me": message.is_from_me,
         "chat_jid": message.chat_jid,
         "id": message.id,
