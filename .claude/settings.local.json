@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(*)",
+      "mcp__WhatsApp__*",
+      "Bash(go build:*)",
+      "Bash(ls C:/Users/Federico/repo/whatsapp-mcp/whatsapp-bridge/*.exe)"
+    ]
+  }
+}
