@@ -405,6 +405,12 @@ func extractMediaInfo(msg *waProto.Message) (mediaType string, filename string, 
 			doc.GetURL(), doc.GetMediaKey(), doc.GetFileSHA256(), doc.GetFileEncSHA256(), doc.GetFileLength()
 	}
 
+	// Check for sticker message
+	if stk := msg.GetStickerMessage(); stk != nil {
+		return "sticker", "sticker_" + time.Now().Format("20060102_150405") + ".webp",
+			stk.GetURL(), stk.GetMediaKey(), stk.GetFileSHA256(), stk.GetFileEncSHA256(), stk.GetFileLength()
+	}
+
 	return "", "", "", nil, nil, nil, 0
 }
 
@@ -626,6 +632,8 @@ func downloadMedia(client *whatsmeow.Client, messageStore *MessageStore, message
 		waMediaType = whatsmeow.MediaAudio
 	case "document":
 		waMediaType = whatsmeow.MediaDocument
+	case "sticker":
+		waMediaType = whatsmeow.MediaImage
 	default:
 		return false, "", "", "", fmt.Errorf("unsupported media type: %s", mediaType)
 	}
