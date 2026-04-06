@@ -200,10 +200,11 @@ type SendMessageRequest struct {
 	Recipient string `json:"recipient"`
 	Message   string `json:"message"`
 	MediaPath string `json:"media_path,omitempty"`
+	AsSticker bool   `json:"as_sticker,omitempty"`
 }
 
 // Function to send a WhatsApp message
-func sendWhatsAppMessage(client *whatsmeow.Client, recipient string, message string, mediaPath string) (bool, string) {
+func sendWhatsAppMessage(client *whatsmeow.Client, recipient string, message string, mediaPath string, asSticker bool) (bool, string) {
 	if !client.IsConnected() {
 		return false, "Not connected to WhatsApp"
 	}
@@ -293,15 +294,27 @@ func sendWhatsAppMessage(client *whatsmeow.Client, recipient string, message str
 		// Create the appropriate message type based on media type
 		switch mediaType {
 		case whatsmeow.MediaImage:
-			msg.ImageMessage = &waProto.ImageMessage{
-				Caption:       proto.String(message),
-				Mimetype:      proto.String(mimeType),
-				URL:           &resp.URL,
-				DirectPath:    &resp.DirectPath,
-				MediaKey:      resp.MediaKey,
-				FileEncSHA256: resp.FileEncSHA256,
-				FileSHA256:    resp.FileSHA256,
-				FileLength:    &resp.FileLength,
+			if asSticker {
+				msg.StickerMessage = &waProto.StickerMessage{
+					Mimetype:      proto.String(mimeType),
+					URL:           &resp.URL,
+					DirectPath:    &resp.DirectPath,
+					MediaKey:      resp.MediaKey,
+					FileEncSHA256: resp.FileEncSHA256,
+					FileSHA256:    resp.FileSHA256,
+					FileLength:    &resp.FileLength,
+				}
+			} else {
+				msg.ImageMessage = &waProto.ImageMessage{
+					Caption:       proto.String(message),
+					Mimetype:      proto.String(mimeType),
+					URL:           &resp.URL,
+					DirectPath:    &resp.DirectPath,
+					MediaKey:      resp.MediaKey,
+					FileEncSHA256: resp.FileEncSHA256,
+					FileSHA256:    resp.FileSHA256,
+					FileLength:    &resp.FileLength,
+				}
 			}
 		case whatsmeow.MediaAudio:
 			// Handle ogg audio files
@@ -714,7 +727,7 @@ func startRESTServer(client *whatsmeow.Client, messageStore *MessageStore, port 
 		fmt.Println("Received request to send message", req.Message, req.MediaPath)
 
 		// Send the message
-		success, message := sendWhatsAppMessage(client, req.Recipient, req.Message, req.MediaPath)
+		success, message := sendWhatsAppMessage(client, req.Recipient, req.Message, req.MediaPath, req.AsSticker)
 		fmt.Println("Message sent", success, message)
 		// Set response headers
 		w.Header().Set("Content-Type", "application/json")
