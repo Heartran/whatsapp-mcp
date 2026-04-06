@@ -106,7 +106,7 @@ def format_message(message: Message, show_chat_info: bool = True) -> str:
     
     try:
         sender_name = get_sender_name(message.sender) if not message.is_from_me else "Me"
-        output += f"From: {sender_name}: {content_prefix}{message.content}"
+        output += f"From: {sender_name}: {content_prefix}{message.content}\n"
     except Exception as e:
         print(f"Error formatting message: {e}")
         return f"[{message.timestamp:%Y-%m-%d %H:%M:%S}] Error formatting message: {e}"
@@ -120,8 +120,7 @@ def format_messages_list(messages: List[Message], show_chat_info: bool = True) -
     
     output = ""
     for message in messages:
-        formatted_msg = format_message(message, show_chat_info)
-        output += formatted_msg + "\n"
+        output += format_message(message, show_chat_info)
     
     return output
 
