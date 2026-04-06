@@ -172,20 +172,43 @@ func (store *MessageStore) GetChats() (map[string]time.Time, error) {
 	return chats, nil
 }
 
+// unwrapMessage recursively unwraps WhatsApp message containers
+// (ephemeral, view-once, document-with-caption) to reach the actual message payload.
+func unwrapMessage(msg *waProto.Message) *waProto.Message {
+	if msg == nil {
+		return nil
+	}
+	if e := msg.GetEphemeralMessage(); e != nil {
+		return unwrapMessage(e.GetMessage())
+	}
+	if v := msg.GetViewOnceMessage(); v != nil {
+		return unwrapMessage(v.GetMessage())
+	}
+	if v := msg.GetViewOnceMessageV2(); v != nil {
+		return unwrapMessage(v.GetMessage())
+	}
+	if v := msg.GetViewOnceMessageV2Extension(); v != nil {
+		return unwrapMessage(v.GetMessage())
+	}
+	if d := msg.GetDocumentWithCaptionMessage(); d != nil {
+		return unwrapMessage(d.GetMessage())
+	}
+	return msg
+}
+
 // Extract text content from a message
 func extractTextContent(msg *waProto.Message) string {
+	msg = unwrapMessage(msg)
 	if msg == nil {
 		return ""
 	}
 
-	// Try to get text content
 	if text := msg.GetConversation(); text != "" {
 		return text
 	} else if extendedText := msg.GetExtendedTextMessage(); extendedText != nil {
 		return extendedText.GetText()
 	}
 
-	// For now, we're ignoring non-text messages
 	return ""
 }
 
@@ -386,6 +409,7 @@ func sendWhatsAppMessage(client *whatsmeow.Client, recipient string, message str
 
 // Extract media info from a message
 func extractMediaInfo(msg *waProto.Message) (mediaType string, filename string, url string, mediaKey []byte, fileSHA256 []byte, fileEncSHA256 []byte, fileLength uint64) {
+	msg = unwrapMessage(msg)
 	if msg == nil {
 		return "", "", "", nil, nil, nil, 0
 	}
